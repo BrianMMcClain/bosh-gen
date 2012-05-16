@@ -7,8 +7,9 @@ module Bosh::Gen
       include Thor::Actions
 
       argument :source_release_path
-      argument :source_job_name
+      argument :source_item_name
       argument :job_name
+      argument :flags, :type => :hash
       
       def check_root_is_release
         unless File.exist?("jobs") && File.exist?("packages")
@@ -21,7 +22,22 @@ module Bosh::Gen
       end
 
       def copy_job_dir
-        directory "jobs/#{source_job_name}", "jobs/#{job_name}"
+        if extract_job?
+          directory "jobs/#{source_item_name}", "jobs/#{job_name}"
+        end
+      end
+      
+      def detect_files_to_extract
+        @detector ||= Bosh::Gen::Models::ExtractDetection.new(source_release_path)
+        if extract_job?
+          @files = detector.extraction_files_for_job(source_item_name)
+        else
+          @files = detector.extraction_files_for_package(source_item_name)
+        end
+      end
+      
+      def copy_extracted_files
+        # TODO
       end
       
       def detect_dependent_packages
@@ -54,6 +70,13 @@ module Bosh::Gen
         File.join("jobs", job_name, path)
       end
       
+      def extract_job?
+        !flags[:extract_package]
+      end
+      
+      def extract_package?
+        flags[:extract_package]
+      end
     end
   end
 end
